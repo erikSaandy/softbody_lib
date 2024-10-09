@@ -1,0 +1,44 @@
+{
+  "RootObject": {
+    "__guid": "1dc68195-1602-4d70-95d2-651a024fa50e",
+    "Flags": 0,
+    "Name": "softbody_particle",
+    "Enabled": true,
+    "Components": [
+      {
+        "__type": "Sandbox.Rigidbody",
+        "__guid": "9a875946-55e7-4434-ad6a-991e3f58ea02",
+        "AngularDamping": 1,
+        "Gravity": true,
+        "LinearDamping": 3,
+        "Locking": {
+          "Roll": true
+        },
+        "MassCenterOverride": "0,0,0",
+        "MassOverride": 0,
+        "MotionEnabled": true,
+        "OverrideMassCenter": false,
+        "RigidbodyFlags": 0,
+        "StartAsleep": false
+      },
+      {
+        "__type": "Sandbox.SphereCollider",
+        "__guid": "b7b90a60-e64b-4620-82d8-fff9159e6490",
+        "Center": "0,0,0",
+        "IsTrigger": false,
+        "Radius": 4,
+        "Static": false
+      }
+    ],
+    "Children": [],
+    "__variables": []
+  },
+  "ShowInMenu": false,
+  "MenuPath": null,
+  "MenuIcon": null,
+  "DontBreakAsTemplate": false,
+  "ResourceVersion": 1,
+  "__references": [],
+  "IsValid": true,
+  "__version": 1
+}
