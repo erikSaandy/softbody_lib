@@ -14,8 +14,8 @@
 						remaps = 
 						[
 							{
-								from = "standardsurface1.vmat"
-								to = "materials/default.vmat"
+								from = "standardsurface2.vmat"
+								to = "models/softbody_box/material/softbody_box.vmat"
 							},
 						]
 						use_global_default = false

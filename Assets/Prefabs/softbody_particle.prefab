@@ -11,9 +11,7 @@
         "AngularDamping": 1,
         "Gravity": true,
         "LinearDamping": 3,
-        "Locking": {
-          "Roll": true
-        },
+        "Locking": {},
         "MassCenterOverride": "0,0,0",
         "MassOverride": 0,
         "MotionEnabled": true,
@@ -39,6 +37,5 @@
   "DontBreakAsTemplate": false,
   "ResourceVersion": 1,
   "__references": [],
-  "IsValid": true,
   "__version": 1
 }

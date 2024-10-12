@@ -5,29 +5,29 @@ public class MySpringJoint : Component
 	[RequireComponent] public Rigidbody Body { get; private set; }
 	[Property] public Rigidbody Other {  get; private set; }
 
-	public void ConnectTo(Rigidbody body, bool twoWay = false )
+	public void ConnectTo(Rigidbody body, float connectionDistance = 0 )
 	{
 		Other = body;
-		WantedDistance = Vector3.DistanceBetween( this.WorldPosition, Other.WorldPosition );
-		this.TwoWay = twoWay;
+
+		if ( connectionDistance == 0 )
+		{
+			WantedDistance = ( Other.WorldPosition - this.WorldPosition ).Length;
+		}
+		else
+		{
+			WantedDistance = connectionDistance;
+		}
+
 	}
-
-	private Vector3 WantedPos;
-
-	[Property] public float WantedDistance { get; private set; }
+	[Property] public float WantedDistance { get; set; }
 
 	[Property][Range(0f, 1f)] public float Damping { get; set; } = 1f;
 	[Property] public float Stiffness { get; set; } = 20f;
-
-	[Property] float? MaxStretchPercentage { get; set; } = 0.5f;
+	[Property][Range( 1f, 10f )] public float MaxStretch { get; set; } = 1.5f;
 
 	[Property] public bool Draw { get; set; } = true;
 
-	/// <summary>
-	/// Will this spring move both objects towards eachother or just other towards this?
-	/// Useful to disable if both objects have springs on eachother.
-	/// </summary>
-	[Property] bool TwoWay { get; set; } = true;
+	public Color GizmoColor { get; set; } = Color.White;
 
 	protected override void OnAwake()
 	{
@@ -44,13 +44,10 @@ public class MySpringJoint : Component
 		if(Other == null) { return; }
 
 		ConstrainBodies( Body, Other );
-
-		if(TwoWay)
-		{
-			ConstrainBodies( Other, Body );
-		}
+		//ConstrainBodies( Other, Body );
 	}
 
+	Vector3 WantedPos;
 	void ConstrainBodies(Rigidbody from, Rigidbody to)
 	{
 
@@ -58,25 +55,29 @@ public class MySpringJoint : Component
 		Vector3 dir = vec.Normal;
 		float dst = vec.Length;
 
-		WantedPos = this.WorldPosition + dir * WantedDistance;
+		WantedPos = from.WorldPosition + dir * WantedDistance;
 
 		// How off is current pos from wanted pos?
-		float offset = (WantedDistance - dst);
+		float stretch = WantedDistance - dst;
 
 		// hooke's law
-		float springForce = Stiffness * offset;
+		Vector3 springForce = dir * (Stiffness * stretch);
 
-		float dot = Vector3.Dot( to.Velocity, dir );
-		float damperForce = dot * -Damping;
+		float relativeVelocity = Vector3.Dot( (to.Velocity - from.Velocity) * Time.Delta, dir );
+		Vector3 damperForce = dir * (-Damping * relativeVelocity);
 
-		float mult = TwoWay ? 0.5f : 1f;
-		to.ApplyForce( dir * springForce * to.PhysicsBody.Mass * mult );
-		to.ApplyForce( dir * damperForce * to.PhysicsBody.Mass * mult );
+		// Apply force proportional to the mass ratio
+		float massRatio = (from.PhysicsBody.Mass / (from.PhysicsBody.Mass + to.PhysicsBody.Mass));
+		to.ApplyForce( ( springForce + damperForce ) * massRatio );
 
-		if ( Vector3.DistanceBetween( from.WorldPosition, to.WorldPosition ) < WantedDistance )
+		float maxDistance = WantedDistance * MaxStretch; 
+		if ( dst > maxDistance )
 		{
-			//to.ApplyForce( ( to.WorldPosition - (from.WorldPosition + dir * WantedDistance) ) * to.PhysicsBody.Mass );
-			//to.ApplyForce( MathF.Abs( dot ) * to.Velocity.Length * dir * to.PhysicsBody.Mass );
+			// Move 'to' closer to 'from'
+			Vector3 clampedPosition = from.WorldPosition + dir * maxDistance;
+			to.Velocity += to.WorldPosition - clampedPosition;
+			//to.ApplyForce( to.WorldPosition - clampedPosition );
+			//to.WorldPosition = clampedPosition;
 		}
 
 	}
@@ -88,16 +89,17 @@ public class MySpringJoint : Component
 		if(!Draw) { return; }
 		if(Other == null) { return; }
 
-		Gizmo.Draw.Color = Color.White;
-		Gizmo.Draw.Line( WorldPosition, Other.WorldPosition );
+		Vector3 vec = Other.WorldPosition - WorldPosition;
+		Vector3 dir = vec.Normal;
+
+		Gizmo.Draw.Color = GizmoColor;
+		Gizmo.Draw.Line( WorldPosition, WorldPosition + dir * 2);
 
 		return;
 
 		//Gizmo.Draw.LineSphere( WantedPos, 10 );
 		Gizmo.Draw.Color = Color.Red;
 
-		Vector3 vec = Other.WorldPosition - WorldPosition;
-		Vector3 dir = vec.Normal;
 		float offset = (WantedDistance - vec.Length);
 		Gizmo.Draw.Line( Other.WorldPosition, Other.WorldPosition + dir * offset );
 

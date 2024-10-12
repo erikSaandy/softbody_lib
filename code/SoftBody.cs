@@ -9,11 +9,13 @@ public sealed class SoftBody : Component
 	public enum DebugFlags
 	{
 		Springs = 1,
-		Particles = 2,
+		ShellParticles = 2,
+		FillParticles = 4
 	}
 
-	[Property][Change] public DebugFlags DebugDrawFlags { get; set; }
-
+	
+	[Category("Debug")][Property][Change] public DebugFlags DebugDrawFlags { get; set; }
+	
 	[RequireComponent] public ModelRenderer Renderer { get; private set; }
 
 	private string ParticlePath = "prefabs/softbody_particle.prefab";
@@ -26,28 +28,22 @@ public sealed class SoftBody : Component
 
 	int VertexParticleCount = 0;
 
-	[Property] public float ConnectionDistance { get; set; } = 400;
-	[Property][Change] public float Stiffness { get; set; } = 700;
-	[Property][Change][Range(0f, 1f)] public float Damping { get; set; } = 0.6f;
-
-	[Property][Change( "ToggleGravity" )] public bool UseGravity { get; set; } = true;
-	[Property][Change][Range( 1f, 50000f )] public float? MassOverride { get; set; } = 0;
-
-	[Property] public float ParticleRadius { get; set; } = 2f;
-
-	void ToggleGravity(bool oldValue, bool newValue)
+	[Property][Change] public bool Gravity { get; set; } = true;
+	void OnGravityChanged( bool oldValue, bool newValue )
 	{
 
-		if(!Game.IsPlaying) { return; }
-		if(Particles?.Count == 0) { return; }
+		if ( !Game.IsPlaying ) { return; }
+		if ( Particles?.Count == 0 ) { return; }
 
-		foreach(Rigidbody particle in Particles)
+		foreach ( Rigidbody particle in Particles )
 		{
 			particle.Gravity = newValue;
+			particle.PhysicsBody.Sleeping = false;
 		}
 
 	}
 
+	[Property][Change][Range( 1f, 50000f )] public float? MassOverride { get; set; }
 	void OnMassOverrideChanged( float? oldValue, float? newValue )
 	{
 		if ( Particles == null ) { return; }
@@ -59,15 +55,23 @@ public sealed class SoftBody : Component
 		}
 	}
 
-	void OnStiffnessChanged(float oldValue, float newValue)
+	[Category( "Characteristics" )]
+	[Property] public float ConnectionDistance { get; set; } = 400;
+
+	[Category( "Characteristics" )]
+	[Property] public float ParticleRadius { get; set; } = 2f;
+
+	[Category( "Characteristics" )]
+	[Property][Change] public float Stiffness { get; set; } = 700;
+	void OnStiffnessChanged( float oldValue, float newValue )
 	{
-		if(Particles == null) { return; } 
+		if ( Particles == null ) { return; }
 
 		foreach ( Rigidbody particle in Particles )
 		{
 			IEnumerable<MySpringJoint> joints = particle.Components.GetAll<MySpringJoint>();
 
-			foreach(MySpringJoint joint in joints)
+			foreach ( MySpringJoint joint in joints )
 			{
 				joint.Stiffness = newValue;
 			}
@@ -75,7 +79,9 @@ public sealed class SoftBody : Component
 		}
 	}
 
-	void OnDampingChanged( float oldValue, float newValue )
+	[Category( "Characteristics" )]
+	[Property][Change][Range( 0f, 200f )] public float SpringDamping { get; set; } = 0f;
+	void OnSpringDampingChanged( float oldValue, float newValue )
 	{
 		if ( Particles == null ) { return; }
 
@@ -88,6 +94,60 @@ public sealed class SoftBody : Component
 				joint.Damping = newValue;
 			}
 
+		}
+	}
+
+	[Category( "Characteristics" )]
+	[Property][Change] public float LinearDamping { get; set; } = 3f;
+	void OnLinearDampingChanged( float oldValue, float newValue )
+	{
+		if ( Particles == null ) { return; }
+
+		foreach ( Rigidbody particle in Particles )
+		{
+			particle.LinearDamping = newValue;
+		}
+	}
+
+	[Category( "Characteristics" )]
+	[Property][Change] public float AngularDamping { get; set; } = 1f;
+	void OnAngularDampingChanged( float oldValue, float newValue )
+	{
+		if ( Particles == null ) { return; }
+
+		foreach ( Rigidbody particle in Particles )
+		{
+			particle.AngularDamping = newValue;
+		}
+	}
+
+	[Category( "Characteristics" )]
+	[Property][Change][Range(1f, 10f)] public float MaxStretch { get; set; } = 1.5f;
+	void OnMaxStretchChanged( float oldValue, float newValue )
+	{
+		if ( Particles == null ) { return; }
+
+		foreach ( Rigidbody particle in Particles )
+		{
+			IEnumerable<MySpringJoint> joints = particle.Components.GetAll<MySpringJoint>();
+
+			foreach ( MySpringJoint joint in joints )
+			{
+				joint.MaxStretch = newValue;
+			}
+
+		}
+	}
+
+	[Category( "Characteristics" )]
+	[Property][Change] public PhysicsLock Locking { get; set; }
+	void OnLockingChanged( PhysicsLock oldValue, PhysicsLock newValue )
+	{
+		if ( Particles == null ) { return; }
+
+		foreach ( Rigidbody particle in Particles )
+		{
+			particle.Locking = Locking;
 		}
 	}
 
@@ -109,7 +169,6 @@ public sealed class SoftBody : Component
 		}
 	}
 
-	[Button("Recreate")]
 	void Create()
 	{
 		DestroyParticles();
@@ -186,15 +245,17 @@ public sealed class SoftBody : Component
 	void CreateParticle( Vector3 position )
 	{
 		Rigidbody particle = PrefabScene.Clone( ParticlePath ).Components.Get<Rigidbody>();
-		particle.Gravity = UseGravity;
+		particle.Gravity = Gravity;
 		particle.WorldPosition = WorldPosition + position;
 		particle.GameObject.BreakFromPrefab();
 		particle.MassOverride = MassOverride.HasValue ? MassOverride.Value : 0f;
 		particle.Components.Get<SphereCollider>().Radius = ParticleRadius;
-		//particle.GameObject.Flags = GameObjectFlags.Hidden;
+		particle.Locking = Locking;
+		
+		particle.GameObject.Flags = GameObjectFlags.Hidden;
+		particle.RigidbodyFlags = RigidbodyFlags.DisableCollisionSounds;
 
 		Particles.Add( particle );
-
 	}
 
 	void DestroyParticles()
@@ -210,31 +271,56 @@ public sealed class SoftBody : Component
 
 	void ConnectParticles()
 	{
+		List<Vector3> dirs = new();
 
-		foreach( Rigidbody particle in Particles)
+		foreach ( Rigidbody particle in Particles)
 		{
+			dirs.Clear();
+
 			foreach( Rigidbody other in Particles)
 			{
 				if(particle == other) { continue; }
 
-				float dst = Vector3.DistanceBetween( particle.WorldPosition, other.WorldPosition );
+				Vector3 vec = other.WorldPosition - particle.WorldPosition;
+				float dst = vec.Length;
+				Vector3 dir = vec.Normal;
+
+				Color col = Color.Random;
 
 				// Distance based check. very unstable. we need to connect diagonal vertices to avoid a shearing collapse effect
-				if( dst < ConnectionDistance * Renderer.WorldScale.x )
+				if ( dst < ConnectionDistance )
 				{
+					// This direction is too similar to excisting direction, skip.
+					//if ( IsTooSimilar( dir ) ) { continue; }
+					//dirs.Add( dir );
+
 					MySpringJoint spring = particle.Components.Create<MySpringJoint>();
 					spring.Stiffness = Stiffness;
-					spring.Damping = Damping;
-					spring.ConnectTo( other.Components.Get<Rigidbody>() );
+					spring.Damping = SpringDamping;
+					spring.ConnectTo( other.Components.Get<Rigidbody>(), dst );
+					
+					spring.WantedDistance = dst;
+					spring.MaxStretch = MaxStretch;
 
-					spring.Other.LinearDamping = 3f;
-					spring.Other.AngularDamping = 1f;
+					spring.Other.LinearDamping = LinearDamping;
+					spring.Other.AngularDamping = AngularDamping;
 
 					spring.Draw = DebugDrawFlags.HasFlag(DebugFlags.Springs);
+					spring.GizmoColor = col;
 				} 
 
 			}
 		}
+
+		//bool IsTooSimilar( Vector3 dir )
+		//{
+		//	foreach ( Vector3 other in dirs )
+		//	{
+		//		if(Vector3.Dot(dir, other) > 0.9f) { return true; }
+		//	}
+
+		//	return false;
+		//}
 
 	}
 
@@ -244,11 +330,9 @@ public sealed class SoftBody : Component
 		Vector3 min = bounds.Mins * Renderer.WorldScale + Renderer.WorldPosition;
 		Vector3 max = bounds.Maxs * Renderer.WorldScale + Renderer.WorldPosition;
 
+		float maxDim = MathF.Max( MathF.Max( bounds.Size.x, bounds.Size.y ), bounds.Size.y );
 		float pRadius = ParticleRadius;
-		float maxDim = MathF.Max( bounds.Size.x, bounds.Size.y );
-		maxDim = MathF.Max( maxDim, bounds.Size.y );
-		float step = MathF.Max( maxDim / 9f, pRadius * 3f );
-
+		float step = MathF.Max( maxDim / 6f, pRadius * 3f );
 
 		float minDst = pRadius * 2;
 
@@ -265,7 +349,7 @@ public sealed class SoftBody : Component
 				{
 					pos.z += step * Renderer.WorldScale.z;
 
-					bool tooClose = Particles.TakeWhile( x => Vector3.DistanceBetween( x.WorldPosition, pos ) > minDst ).Count() < Particles.Count;
+					bool tooClose = Particles.TakeWhile( x => (x.WorldPosition - pos).Length > minDst ).Count() < Particles.Count;
 					// Found excisting particle too close to this.
 					if ( tooClose ) { continue; }
 
@@ -296,9 +380,17 @@ public sealed class SoftBody : Component
 		{
 			pos += Particles[i].WorldPosition;
 
-			if ( DebugDrawFlags.HasFlag(DebugFlags.Particles) ) {
-				Gizmo.Draw.Color = i < VertexParticleCount ? Color.Red : Color.White;
-				Gizmo.Draw.LineSphere( Particles[i].WorldPosition, ParticleRadius ); 
+			if (i < VertexParticleCount ) {
+				if( DebugDrawFlags.HasFlag( DebugFlags.ShellParticles ) )
+				{
+					Gizmo.Draw.Color = Color.Red;
+					Gizmo.Draw.LineSphere( Particles[i].WorldPosition, ParticleRadius );
+				}
+			}
+			else if ( DebugDrawFlags.HasFlag( DebugFlags.FillParticles ) )
+			{
+				Gizmo.Draw.Color = Color.White;
+				Gizmo.Draw.LineSphere( Particles[i].WorldPosition, ParticleRadius );
 			}
 		}
 

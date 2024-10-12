@@ -236,8 +236,8 @@
       "__guid": "3ee1c9f4-07be-4e0b-8b23-67bee2d8ec8a",
       "Flags": 0,
       "Name": "Camera",
-      "Position": "-267.452,-379.653,297.7903",
-      "Rotation": "-0.1448582,0.2860239,0.4279631,0.8450171",
+      "Position": "-27.71827,-756.3712,434.9431",
+      "Rotation": "-0.2379057,0.09976025,0.8909884,0.3736153",
       "Enabled": true,
       "Components": [
         {
@@ -245,7 +245,7 @@
           "__guid": "cf3cbf96-22b6-4be4-a5d0-672a96c17f9f",
           "BackgroundColor": "0.33333,0.46275,0.52157,1",
           "ClearFlags": "All",
-          "FieldOfView": 60,
+          "FieldOfView": 86.96,
           "IsMainCamera": true,
           "Orthographic": false,
           "OrthographicHeight": 1204,
@@ -311,22 +311,20 @@
       "Flags": 0,
       "Name": "Object (1)",
       "Position": "22.22007,-123.5792,194.7616",
-      "Enabled": true,
       "Components": [
         {
           "__type": "MySpringJoint",
           "__guid": "96c5908e-7e79-474e-b8c6-bd7800206607",
-          "Damping": 1.5,
+          "Damping": 0.05,
           "Draw": true,
-          "MaxStretchPercentage": 0.5,
+          "MaxStretch": 1.5,
           "Other": {
             "_type": "component",
             "component_id": "49a30c74-adfe-47a0-b663-879b53429898",
             "go": "e701c051-7e2c-4581-b143-47116e6827e2",
             "component_type": "Rigidbody"
           },
-          "Stiffness": 200,
-          "TwoWay": true,
+          "Stiffness": 0.5,
           "WantedDistance": 0
         },
         {
@@ -376,7 +374,6 @@
       "Flags": 0,
       "Name": "Object (2)",
       "Position": "34.86419,-63.46523,196.1487",
-      "Enabled": true,
       "Components": [
         {
           "__type": "Sandbox.Rigidbody",
@@ -417,17 +414,16 @@
         {
           "__type": "MySpringJoint",
           "__guid": "e6c48a8f-266e-4b26-932e-974d3147a2b9",
-          "Damping": 1.5,
+          "Damping": 0.05,
           "Draw": true,
-          "MaxStretchPercentage": 0.5,
+          "MaxStretch": 1.5,
           "Other": {
             "_type": "component",
             "component_id": "a52fe9c8-f483-4975-a303-fc21a032b4ce",
             "go": "0b9b8520-3347-4238-aaa2-faf36a81c11b",
             "component_type": "Rigidbody"
           },
-          "Stiffness": 200,
-          "TwoWay": true,
+          "Stiffness": 0.5,
           "WantedDistance": 0
         }
       ]
@@ -437,7 +433,6 @@
       "Flags": 0,
       "Name": "Object (3)",
       "Position": "38.76323,-2.305351,196.1487",
-      "Enabled": true,
       "Components": [
         {
           "__type": "Sandbox.Rigidbody",
@@ -482,14 +477,13 @@
       "Flags": 0,
       "Name": "Object (4)",
       "Position": "-197.8006,31.46864,196.1487",
-      "Enabled": true,
       "Components": [
         {
           "__type": "Sandbox.Rigidbody",
           "__guid": "8a2ff49f-ab24-42a5-a63a-e197ec5ecf69",
-          "AngularDamping": 0,
+          "AngularDamping": 1,
           "Gravity": true,
-          "LinearDamping": 0,
+          "LinearDamping": 1,
           "Locking": {},
           "MassCenterOverride": "0,0,0",
           "MassOverride": 0,
@@ -527,7 +521,6 @@
       "Flags": 0,
       "Name": "Object (5)",
       "Position": "-197.8006,-71.48147,196.1487",
-      "Enabled": true,
       "Components": [
         {
           "__type": "Sandbox.Rigidbody",
@@ -538,7 +531,10 @@
           "Locking": {
             "X": true,
             "Y": true,
-            "Z": true
+            "Z": true,
+            "Pitch": true,
+            "Yaw": true,
+            "Roll": true
           },
           "MassCenterOverride": "0,0,0",
           "MassOverride": 0,
@@ -574,15 +570,14 @@
           "__guid": "9e548e34-c5be-4dab-bc68-af00a7fed99e",
           "Damping": 1.5,
           "Draw": true,
-          "MaxStretchPercentage": 0.5,
+          "MaxStretch": 1.5,
           "Other": {
             "_type": "component",
             "component_id": "8a2ff49f-ab24-42a5-a63a-e197ec5ecf69",
             "go": "c1985190-d950-4465-a72c-19187574ba87",
             "component_type": "Rigidbody"
           },
-          "Stiffness": 20,
-          "TwoWay": true,
+          "Stiffness": 1,
           "WantedDistance": 0
         }
       ]
@@ -769,6 +764,134 @@
       ]
     },
     {
+      "__guid": "173ddf37-dd58-4842-a133-700ea7bd3452",
+      "Flags": 0,
+      "Name": "Cube (11)",
+      "Position": "-548.4391,-736.7369,455.6163",
+      "Scale": "3.790026,7.278705,2.973629",
+      "Enabled": true,
+      "Components": [
+        {
+          "__type": "Sandbox.ModelRenderer",
+          "__guid": "b840c41c-7cf9-45e5-abe9-9bf848bd6061",
+          "BodyGroups": 18446744073709551615,
+          "Model": "models/dev/box.vmdl",
+          "RenderOptions": {
+            "GameLayer": true,
+            "OverlayLayer": false,
+            "BloomLayer": false,
+            "AfterUILayer": false
+          },
+          "RenderType": "On",
+          "Tint": "1,1,1,1"
+        },
+        {
+          "__type": "Sandbox.BoxCollider",
+          "__guid": "2eeda371-b8c3-493f-93fc-f9dde94ab830",
+          "Center": "0,0,0",
+          "IsTrigger": false,
+          "Scale": "50,50,50",
+          "Static": false
+        }
+      ]
+    },
+    {
+      "__guid": "3d6cf0a7-8f29-4eb2-aacd-8c69e71ac3f7",
+      "Flags": 0,
+      "Name": "Cube (12)",
+      "Position": "-438.8468,-736.7371,319.7581",
+      "Scale": "3.790026,7.278705,2.973629",
+      "Enabled": true,
+      "Components": [
+        {
+          "__type": "Sandbox.ModelRenderer",
+          "__guid": "7ba01d61-5c7c-40cd-a585-4bbad121ef65",
+          "BodyGroups": 18446744073709551615,
+          "Model": "models/dev/box.vmdl",
+          "RenderOptions": {
+            "GameLayer": true,
+            "OverlayLayer": false,
+            "BloomLayer": false,
+            "AfterUILayer": false
+          },
+          "RenderType": "On",
+          "Tint": "1,1,1,1"
+        },
+        {
+          "__type": "Sandbox.BoxCollider",
+          "__guid": "17a0a714-d0f4-45e0-8882-1595a323d2fd",
+          "Center": "0,0,0",
+          "IsTrigger": false,
+          "Scale": "50,50,50",
+          "Static": false
+        }
+      ]
+    },
+    {
+      "__guid": "86e7a5f1-bce5-4423-ac68-1c868fe01277",
+      "Flags": 0,
+      "Name": "Cube (13)",
+      "Position": "-341.8693,-736.7367,182.6898",
+      "Scale": "3.790026,7.278705,2.973629",
+      "Enabled": true,
+      "Components": [
+        {
+          "__type": "Sandbox.ModelRenderer",
+          "__guid": "8f22e1bc-556d-4c4c-80f3-e037df3012c3",
+          "BodyGroups": 18446744073709551615,
+          "Model": "models/dev/box.vmdl",
+          "RenderOptions": {
+            "GameLayer": true,
+            "OverlayLayer": false,
+            "BloomLayer": false,
+            "AfterUILayer": false
+          },
+          "RenderType": "On",
+          "Tint": "1,1,1,1"
+        },
+        {
+          "__type": "Sandbox.BoxCollider",
+          "__guid": "73d33799-dc71-4d10-b0b4-4727c27c0a18",
+          "Center": "0,0,0",
+          "IsTrigger": false,
+          "Scale": "50,50,50",
+          "Static": false
+        }
+      ]
+    },
+    {
+      "__guid": "9ab3328f-7ad8-41a1-bdaa-16acbfae8f10",
+      "Flags": 0,
+      "Name": "Cube (14)",
+      "Position": "-208.7085,-736.7367,49.34248",
+      "Scale": "3.790026,7.278705,2.973629",
+      "Enabled": true,
+      "Components": [
+        {
+          "__type": "Sandbox.ModelRenderer",
+          "__guid": "576d5cb0-abac-4745-98a3-03d682c231b4",
+          "BodyGroups": 18446744073709551615,
+          "Model": "models/dev/box.vmdl",
+          "RenderOptions": {
+            "GameLayer": true,
+            "OverlayLayer": false,
+            "BloomLayer": false,
+            "AfterUILayer": false
+          },
+          "RenderType": "On",
+          "Tint": "1,1,1,1"
+        },
+        {
+          "__type": "Sandbox.BoxCollider",
+          "__guid": "07812d4e-96ab-4eee-8012-200c037dd25e",
+          "Center": "0,0,0",
+          "IsTrigger": false,
+          "Scale": "50,50,50",
+          "Static": false
+        }
+      ]
+    },
+    {
       "__guid": "4e4e1501-4d68-46b4-882a-ac2cbbef2fec",
       "Flags": 0,
       "Name": "Cube (3)",
@@ -900,7 +1023,7 @@
       "__guid": "10c8a210-cb9d-477b-8b47-e6646445ab64",
       "Flags": 0,
       "Name": "softbody_box",
-      "Position": "-463.647,-381.1834,515.4128",
+      "Position": "-468.5545,-353.0177,471.2251",
       "Enabled": true,
       "Components": [
         {
@@ -920,13 +1043,16 @@
         {
           "__type": "Saandy.SoftBody",
           "__guid": "55a7c86c-775c-4046-b113-6b75a83d788c",
-          "ConnectionDistance": 20,
-          "Damping": 0,
-          "DebugDrawFlags": 0,
-          "MassOverride": 0,
-          "ParticleRadius": 3,
-          "Stiffness": 750,
-          "UseGravity": true
+          "AngularDamping": 2,
+          "ConnectionDistance": 15,
+          "DebugDrawFlags": "FillParticles",
+          "Gravity": false,
+          "LinearDamping": 2,
+          "Locking": {},
+          "MaxStretch": 1,
+          "ParticleRadius": 2,
+          "SpringDamping": 58.97,
+          "Stiffness": 2000
         }
       ]
     },
@@ -953,12 +1079,17 @@
         {
           "__type": "Saandy.SoftBody",
           "__guid": "4c33cddf-2a27-4585-b616-24bebf532c3b",
+          "AngularDamping": 3,
           "ConnectionDistance": 18,
-          "Damping": 0,
-          "DebugDrawFlags": "Springs, Particles",
+          "DebugDrawFlags": "Springs, ShellParticles",
+          "Gravity": true,
+          "LinearDamping": 3,
+          "Locking": {},
+          "MassOverride": 0,
+          "MaxStretch": 1.5,
           "ParticleRadius": 4,
-          "Stiffness": 700,
-          "UseGravity": false
+          "SpringDamping": 0,
+          "Stiffness": 700
         }
       ]
     }
@@ -968,7 +1099,7 @@
     "MaxFixedUpdates": 5,
     "NetworkFrequency": 60,
     "NetworkInterpolation": true,
-    "PhysicsSubSteps": 1,
+    "PhysicsSubSteps": 3,
     "ThreadedAnimation": true,
     "TimeScale": 1,
     "UseFixedUpdate": true,
@@ -991,6 +1122,5 @@
   "__references": [
     "tbt.methtnt#1194"
   ],
-  "IsValid": true,
   "__version": 1
 }
