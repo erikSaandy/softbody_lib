@@ -1,10 +1,16 @@
 using System;
-using System.Diagnostics;
 
 namespace Saandy;
 
 public sealed class SoftBody : Component
 {
+	struct Connection
+	{
+		public uint A;
+		public uint B;
+		public float WantedDistance;
+	}
+
 	[Flags]
 	public enum DebugFlags
 	{
@@ -14,7 +20,7 @@ public sealed class SoftBody : Component
 	}
 
 	
-	[Category("Debug")][Property][Change] public DebugFlags DebugDrawFlags { get; set; }
+	[Category("Debug")][Property] public DebugFlags DebugDrawFlags { get; set; }
 	
 	[RequireComponent] public ModelRenderer Renderer { get; private set; }
 
@@ -22,6 +28,8 @@ public sealed class SoftBody : Component
 
 	List<Rigidbody> Particles { get; set; }
 	List<uint> VertexIds;
+
+	List<Connection> Connections { get; set; }
 
 	ComputeBuffer<Vector4> PointsBuffer;
 	ComputeBuffer<uint> IDBuffer;
@@ -31,8 +39,7 @@ public sealed class SoftBody : Component
 	[Property][Change] public bool Gravity { get; set; } = true;
 	void OnGravityChanged( bool oldValue, bool newValue )
 	{
-
-		if ( !Game.IsPlaying ) { return; }
+		if(!Game.IsPlaying) { return; }
 		if ( Particles?.Count == 0 ) { return; }
 
 		foreach ( Rigidbody particle in Particles )
@@ -56,46 +63,16 @@ public sealed class SoftBody : Component
 	}
 
 	[Category( "Characteristics" )]
-	[Property] public float ConnectionDistance { get; set; } = 400;
+	[Property] public float ConnectionDistance { get; set; } = 20;
 
 	[Category( "Characteristics" )]
 	[Property] public float ParticleRadius { get; set; } = 2f;
 
 	[Category( "Characteristics" )]
-	[Property][Change] public float Stiffness { get; set; } = 700;
-	void OnStiffnessChanged( float oldValue, float newValue )
-	{
-		if ( Particles == null ) { return; }
-
-		foreach ( Rigidbody particle in Particles )
-		{
-			IEnumerable<MySpringJoint> joints = particle.Components.GetAll<MySpringJoint>();
-
-			foreach ( MySpringJoint joint in joints )
-			{
-				joint.Stiffness = newValue;
-			}
-
-		}
-	}
+	[Property] public float Stiffness { get; set; } = 700;
 
 	[Category( "Characteristics" )]
-	[Property][Change][Range( 0f, 200f )] public float SpringDamping { get; set; } = 0f;
-	void OnSpringDampingChanged( float oldValue, float newValue )
-	{
-		if ( Particles == null ) { return; }
-
-		foreach ( Rigidbody particle in Particles )
-		{
-			IEnumerable<MySpringJoint> joints = particle.Components.GetAll<MySpringJoint>();
-
-			foreach ( MySpringJoint joint in joints )
-			{
-				joint.Damping = newValue;
-			}
-
-		}
-	}
+	[Property][Range( 0f, 500f )] public float SpringDamping { get; set; } = 0f;
 
 	[Category( "Characteristics" )]
 	[Property][Change] public float LinearDamping { get; set; } = 3f;
@@ -122,22 +99,7 @@ public sealed class SoftBody : Component
 	}
 
 	[Category( "Characteristics" )]
-	[Property][Change][Range(1f, 10f)] public float MaxStretch { get; set; } = 1.5f;
-	void OnMaxStretchChanged( float oldValue, float newValue )
-	{
-		if ( Particles == null ) { return; }
-
-		foreach ( Rigidbody particle in Particles )
-		{
-			IEnumerable<MySpringJoint> joints = particle.Components.GetAll<MySpringJoint>();
-
-			foreach ( MySpringJoint joint in joints )
-			{
-				joint.MaxStretch = newValue;
-			}
-
-		}
-	}
+	[Property][Range(1f, 10f)] public float MaxStretch { get; set; } = 1.5f;
 
 	[Category( "Characteristics" )]
 	[Property][Change] public PhysicsLock Locking { get; set; }
@@ -148,24 +110,6 @@ public sealed class SoftBody : Component
 		foreach ( Rigidbody particle in Particles )
 		{
 			particle.Locking = Locking;
-		}
-	}
-
-	void OnDebugDrawFlagsChanged( DebugFlags oldValue, DebugFlags newValue)
-	{
-		if ( Particles == null ) { return; }
-
-		foreach ( Rigidbody particle in Particles )
-		{
-
-			bool drawSpring = DebugDrawFlags.HasFlag( DebugFlags.Springs );
-			IEnumerable<MySpringJoint> springs = particle.Components.GetAll<MySpringJoint>();
-			foreach ( MySpringJoint spring in springs )
-			{
-
-				spring.Draw = drawSpring;
-			}
-
 		}
 	}
 
@@ -251,7 +195,10 @@ public sealed class SoftBody : Component
 		particle.MassOverride = MassOverride.HasValue ? MassOverride.Value : 0f;
 		particle.Components.Get<SphereCollider>().Radius = ParticleRadius;
 		particle.Locking = Locking;
-		
+
+		particle.LinearDamping = LinearDamping;
+		particle.AngularDamping = AngularDamping;
+
 		particle.GameObject.Flags = GameObjectFlags.Hidden;
 		particle.RigidbodyFlags = RigidbodyFlags.DisableCollisionSounds;
 
@@ -271,17 +218,17 @@ public sealed class SoftBody : Component
 
 	void ConnectParticles()
 	{
-		List<Vector3> dirs = new();
+		Connections = new();
 
-		foreach ( Rigidbody particle in Particles)
+		for(int A = 0; A < Particles.Count; A++ )
 		{
-			dirs.Clear();
+			//dirs.Clear();
 
-			foreach( Rigidbody other in Particles)
+			// If (B, A) already excist, we don't add (A, B). We also skip B = A.
+			for ( int B = A + 1; B < Particles.Count; B++ )
 			{
-				if(particle == other) { continue; }
 
-				Vector3 vec = other.WorldPosition - particle.WorldPosition;
+				Vector3 vec = Particles[B].WorldPosition - Particles[A].WorldPosition;
 				float dst = vec.Length;
 				Vector3 dir = vec.Normal;
 
@@ -290,37 +237,12 @@ public sealed class SoftBody : Component
 				// Distance based check. very unstable. we need to connect diagonal vertices to avoid a shearing collapse effect
 				if ( dst < ConnectionDistance )
 				{
-					// This direction is too similar to excisting direction, skip.
-					//if ( IsTooSimilar( dir ) ) { continue; }
-					//dirs.Add( dir );
-
-					MySpringJoint spring = particle.Components.Create<MySpringJoint>();
-					spring.Stiffness = Stiffness;
-					spring.Damping = SpringDamping;
-					spring.ConnectTo( other.Components.Get<Rigidbody>(), dst );
-					
-					spring.WantedDistance = dst;
-					spring.MaxStretch = MaxStretch;
-
-					spring.Other.LinearDamping = LinearDamping;
-					spring.Other.AngularDamping = AngularDamping;
-
-					spring.Draw = DebugDrawFlags.HasFlag(DebugFlags.Springs);
-					spring.GizmoColor = col;
-				} 
-
+					Connections.Add( new Connection() { A = (uint)A, B = (uint)B, WantedDistance = dst } );
+				}
 			}
 		}
 
-		//bool IsTooSimilar( Vector3 dir )
-		//{
-		//	foreach ( Vector3 other in dirs )
-		//	{
-		//		if(Vector3.Dot(dir, other) > 0.9f) { return true; }
-		//	}
-
-		//	return false;
-		//}
+		Log.Info( Connections.Count );
 
 	}
 
@@ -397,10 +319,69 @@ public sealed class SoftBody : Component
 		// Center object position on average particle position.
 		WorldPosition = pos / Particles.Count;
 
-		if ( !Renderer.Enabled ) { return; }
 
 		PointsBuffer.SetData( Particles.Take( VertexParticleCount ).Select( x => new Vector4( (x.WorldPosition - WorldPosition) ) ).ToList() );
+		if ( !Renderer.Enabled ) { return; }
 		Renderer.SceneObject.Attributes.Set( "_Positions", PointsBuffer );
+
+	}
+
+	protected override void OnFixedUpdate()
+	{
+		base.OnFixedUpdate();
+
+		foreach ( Connection con in Connections )
+		{
+			// TODO: make this one call.
+			ConstrainParticles( con.A, con.B, con.WantedDistance );
+			ConstrainParticles( con.B, con.A, con.WantedDistance );
+		}
+
+	}
+
+	Vector3 wantedPos;
+	void ConstrainParticles( uint A, uint B, float WantedDistance )
+	{
+
+		Rigidbody from = Particles[(int)A];
+		Rigidbody to = Particles[(int)B];
+
+		Vector3 vec = to.WorldPosition - from.WorldPosition;
+		Vector3 dir = vec.Normal;
+		float dst = vec.Length;
+
+		wantedPos = from.WorldPosition + dir * WantedDistance;
+
+		// How off is current pos from wanted pos?
+		float stretch = WantedDistance - dst;
+
+		// hooke's law
+		Vector3 springForce = dir * (Stiffness * stretch);
+
+		float relativeVelocity = Vector3.Dot( (to.Velocity - from.Velocity) * Time.Delta, dir );
+		Vector3 damperForce = dir * (-SpringDamping * relativeVelocity);
+
+		// Apply force proportional to the mass ratio
+		float massRatio = (from.PhysicsBody.Mass / (from.PhysicsBody.Mass + to.PhysicsBody.Mass));
+		to.ApplyForce( (springForce + damperForce) * massRatio );
+
+		float maxDistance = WantedDistance * MaxStretch;
+		if ( dst > maxDistance )
+		{
+			// Move 'to' closer to 'from'
+			Vector3 clampedPosition = from.WorldPosition + dir * maxDistance;
+			to.Velocity += to.WorldPosition - clampedPosition;
+			//to.ApplyForce( to.WorldPosition - clampedPosition );
+			//to.WorldPosition = clampedPosition;
+		}
+
+#if DEBUG
+		if(DebugDrawFlags.Contains(DebugFlags.Springs))
+		{
+			Gizmo.Draw.Color = ColorX.GooberColors[A % ColorX.GooberColors.Length];
+			Gizmo.Draw.Line( to.WorldPosition, to.WorldPosition + (from.WorldPosition - to.WorldPosition).Normal );
+		}
+#endif
 
 	}
 

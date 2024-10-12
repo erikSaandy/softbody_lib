@@ -1023,7 +1023,7 @@
       "__guid": "10c8a210-cb9d-477b-8b47-e6646445ab64",
       "Flags": 0,
       "Name": "softbody_box",
-      "Position": "-468.5545,-353.0177,471.2251",
+      "Position": "-468.5545,-372.5906,471.2251",
       "Enabled": true,
       "Components": [
         {
@@ -1044,15 +1044,19 @@
           "__type": "Saandy.SoftBody",
           "__guid": "55a7c86c-775c-4046-b113-6b75a83d788c",
           "AngularDamping": 2,
-          "ConnectionDistance": 15,
-          "DebugDrawFlags": "FillParticles",
-          "Gravity": false,
+          "ConnectionDistance": 20,
+          "DebugDrawFlags": 0,
+          "Gravity": true,
           "LinearDamping": 2,
-          "Locking": {},
-          "MaxStretch": 1,
+          "Locking": {
+            "Pitch": true,
+            "Yaw": true,
+            "Roll": true
+          },
+          "MaxStretch": 2.04,
           "ParticleRadius": 2,
-          "SpringDamping": 58.97,
-          "Stiffness": 2000
+          "SpringDamping": 0.1,
+          "Stiffness": 4000
         }
       ]
     },
@@ -1081,7 +1085,7 @@
           "__guid": "4c33cddf-2a27-4585-b616-24bebf532c3b",
           "AngularDamping": 3,
           "ConnectionDistance": 18,
-          "DebugDrawFlags": "Springs, ShellParticles",
+          "DebugDrawFlags": 0,
           "Gravity": true,
           "LinearDamping": 3,
           "Locking": {},
