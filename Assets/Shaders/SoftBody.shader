@@ -37,12 +37,13 @@ VS
 	StructuredBuffer<float4> _Positions < Attribute("_Positions"); >;
 	StructuredBuffer<uint> _IDs < Attribute("_IDs"); >;
 
-	//float _Scale <Attribute("_Scale"); >;
+	float3 _Scale <Attribute("_Scale"); >;
 
 	PixelInput MainVs( VertexInput i, uint id : SV_VertexID )
 	{
 
 		i.vPositionOs = _Positions[_IDs[id]];
+		i.vPositionOs /= _Scale;
 
 		PixelInput o = ProcessVertex( i );
 

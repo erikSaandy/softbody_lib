@@ -142,6 +142,7 @@ public sealed class SoftBody : Component
 		IDBuffer = new ComputeBuffer<uint>( VertexIds.Count, ComputeBufferType.Structured );
 		IDBuffer.SetData( VertexIds );
 		Renderer.SceneObject.Attributes.Set( "_IDs", IDBuffer );
+		Renderer.SceneObject.Attributes.Set( "_Scale", WorldScale );
 
 	}
 
@@ -157,7 +158,7 @@ public sealed class SoftBody : Component
 	{
 
 		Sandbox.Vertex[] allVertices = Renderer.Model.GetVertices();
-
+		
 		List<Vector3> positions = new();
 		
 		VertexIds = new();
@@ -177,7 +178,7 @@ public sealed class SoftBody : Component
 			else
 			{
 				VertexIds.Add( (uint)positions.Count );
-				positions.Add( allVertices[i].Position );
+				positions.Add( allVertices[i].Position * WorldScale );
 			}
 
 		}
@@ -234,7 +235,7 @@ public sealed class SoftBody : Component
 
 				Color col = Color.Random;
 
-				// Distance based check. very unstable. we need to connect diagonal vertices to avoid a shearing collapse effect
+				// Distance based check. we need to connect diagonal vertices to avoid a shearing collapse effect
 				if ( dst < ConnectionDistance )
 				{
 					Connections.Add( new Connection() { A = (uint)A, B = (uint)B, WantedDistance = dst } );
@@ -256,7 +257,7 @@ public sealed class SoftBody : Component
 		float pRadius = ParticleRadius;
 		float step = MathF.Max( maxDim / 6f, pRadius * 3f );
 
-		float minDst = pRadius * 2;
+		float minDst = pRadius * 2f;
 
 		Vector3 pos = new Vector3( min.x, min.y, min.z );
 		while ( pos.y < max.y )
@@ -275,7 +276,7 @@ public sealed class SoftBody : Component
 					// Found excisting particle too close to this.
 					if ( tooClose ) { continue; }
 
-					if ( Math2d.PointIsWithinMesh( pos, Renderer ) )
+					if ( Math2d.PointIsWithinMesh( pos - WorldPosition, Renderer ) )
 					{
 						// Todo, use matrix to rotate / scale position.
 						CreateParticle( pos - WorldPosition );
@@ -336,6 +337,10 @@ public sealed class SoftBody : Component
 			ConstrainParticles( con.A, con.B, con.WantedDistance );
 			ConstrainParticles( con.B, con.A, con.WantedDistance );
 		}
+
+		BBox bounds = Renderer.Model.Bounds;
+		Vector3 min = bounds.Mins * Renderer.WorldScale + Renderer.WorldPosition;
+		Vector3 max = bounds.Maxs * Renderer.WorldScale + Renderer.WorldPosition;
 
 	}
 

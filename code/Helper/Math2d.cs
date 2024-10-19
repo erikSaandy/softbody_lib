@@ -216,11 +216,11 @@ namespace Saandy
 		/// Is point within this renderer's world-space mesh?
 		/// https://stackoverflow.com/questions/6554313/algorithm-for-determining-whether-a-point-is-inside-a-3d-mesh
 		/// </summary>
-		public static bool PointIsWithinMesh( Vector3 point, ModelRenderer renderer )
+		public static bool PointIsWithinMesh( Vector3 localPosition, ModelRenderer renderer )
 		{
 
 			// Get a set of triangles to check against.
-			Vector3[] vertices = renderer.Model.GetVertices().Select( x => (x.Position + renderer.WorldPosition ) ).ToArray();
+			Vector3[] vertices = renderer.Model.GetVertices().Select( x => ((x.Position * renderer.WorldScale) ) ).ToArray();
 			uint[] indicies = renderer.Model.GetIndices();
 			int triCount = indicies.Length / 3;
 			List<Triangle> triangles = new();
@@ -238,7 +238,7 @@ namespace Saandy
 				Vector2 maxs = aabb.Maxs;
 
 				// Within 2d aabb?
-				if ( mins.x < point.x && mins.y < point.y && maxs.x > point.x && maxs.y > point.y )
+				if ( mins.x < localPosition.x && mins.y < localPosition.y && maxs.x > localPosition.x && maxs.y > localPosition.y )
 				{
 					triangles.Add( tri );
 				}
@@ -248,9 +248,9 @@ namespace Saandy
 
 			for ( int i = 0; i < triangles.Count; i++ )
 			{
-				if ( triangles[i].GetRayIntersection( point, Vector3.Up, out Vector3 iPoint ) )
+				if ( triangles[i].GetRayIntersection( localPosition, Vector3.Up, out Vector3 iPoint ) )
 				{
-					if ( iPoint.z > point.z )
+					if ( iPoint.z > localPosition.z )
 					{
 						iTriCount++;
 					}

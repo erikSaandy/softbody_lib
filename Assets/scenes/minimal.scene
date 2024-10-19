@@ -1088,10 +1088,13 @@
           "DebugDrawFlags": 0,
           "Gravity": true,
           "LinearDamping": 3,
-          "Locking": {},
-          "MassOverride": 0,
-          "MaxStretch": 1.5,
-          "ParticleRadius": 4,
+          "Locking": {
+            "Pitch": true,
+            "Yaw": true,
+            "Roll": true
+          },
+          "MaxStretch": 2,
+          "ParticleRadius": 3,
           "SpringDamping": 0,
           "Stiffness": 700
         }
