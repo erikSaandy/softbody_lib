@@ -15,7 +15,7 @@
 						[
 							{
 								from = "standardsurface3.vmat"
-								to = "models/softbody_box/material/softbody_box.vmat"
+								to = "models/softbody_box/material/softbody_cloth.vmat"
 							},
 						]
 						use_global_default = false
@@ -40,7 +40,7 @@
 								prefer_high_density_tris_in_uv_density_calc = false
 							},
 						]
-						filename = "models/softbody_box/softbody_box.fbx"
+						filename = "models/softbody_box/softbody_cloth.fbx"
 						import_translation = [ 0.0, 0.0, 0.0 ]
 						import_rotation = [ 0.0, 0.0, 0.0 ]
 						import_scale = 1.0

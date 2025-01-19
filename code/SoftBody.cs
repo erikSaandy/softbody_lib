@@ -11,6 +11,8 @@ public sealed class SoftBody : Component
 		public float WantedDistance;
 	}
 
+	Vector3[] StartPositions;
+
 	[Flags]
 	public enum DebugFlags
 	{
@@ -31,10 +33,12 @@ public sealed class SoftBody : Component
 
 	List<Connection> Connections { get; set; }
 
-	ComputeBuffer<Vector4> PointsBuffer;
-	ComputeBuffer<uint> IDBuffer;
+	GpuBuffer<Vector4> PointsBuffer;
+	GpuBuffer<uint> IDBuffer;
 
 	int VertexParticleCount = 0;
+
+	Vector3 CenterOfMass { get; set; } = 0;
 
 	[Property][Change] public bool Gravity { get; set; } = true;
 	void OnGravityChanged( bool oldValue, bool newValue )
@@ -62,14 +66,14 @@ public sealed class SoftBody : Component
 		}
 	}
 
-	[Category( "Characteristics" )]
-	[Property] public float ConnectionDistance { get; set; } = 20;
+	public float ConnectionDistance { get; set; }
 
 	[Category( "Characteristics" )]
 	[Property] public float ParticleRadius { get; set; } = 2f;
 
 	[Category( "Characteristics" )]
 	[Property] public float Stiffness { get; set; } = 700;
+	[Property] public float ShapeRetentionStiffness { get; set; } = 4000;
 
 	[Category( "Characteristics" )]
 	[Property][Range( 0f, 500f )] public float SpringDamping { get; set; } = 0f;
@@ -135,11 +139,11 @@ public sealed class SoftBody : Component
 
 		FillWithParticles();
 
-		ConnectParticles();
+		BuildConnections();
 
-		PointsBuffer = new ComputeBuffer<Vector4>( VertexParticleCount, ComputeBufferType.Structured );
+		PointsBuffer = new GpuBuffer<Vector4>( VertexParticleCount, GpuBuffer.UsageFlags.Structured );
 
-		IDBuffer = new ComputeBuffer<uint>( VertexIds.Count, ComputeBufferType.Structured );
+		IDBuffer = new GpuBuffer<uint>( VertexIds.Count, GpuBuffer.UsageFlags.Structured );
 		IDBuffer.SetData( VertexIds );
 		Renderer.SceneObject.Attributes.Set( "_IDs", IDBuffer );
 		Renderer.SceneObject.Attributes.Set( "_Scale", WorldScale );
@@ -217,13 +221,13 @@ public sealed class SoftBody : Component
 		}
 	}
 
-	void ConnectParticles()
+
+	void BuildConnections()
 	{
 		Connections = new();
 
 		for(int A = 0; A < Particles.Count; A++ )
 		{
-			//dirs.Clear();
 
 			// If (B, A) already excist, we don't add (A, B). We also skip B = A.
 			for ( int B = A + 1; B < Particles.Count; B++ )
@@ -238,12 +242,26 @@ public sealed class SoftBody : Component
 				// Distance based check. we need to connect diagonal vertices to avoid a shearing collapse effect
 				if ( dst < ConnectionDistance )
 				{
-					Connections.Add( new Connection() { A = (uint)A, B = (uint)B, WantedDistance = dst } );
+					Connections.Add( new Connection() { A = (uint)A, B = (uint)B, WantedDistance = ConnectionDistance } );
 				}
 			}
 		}
 
 		Log.Info( Connections.Count );
+
+		// Get rest positions
+
+		Vector3 centerOfMass = Vector3.Zero;
+
+		StartPositions = new Vector3[Particles.Count];
+
+		foreach ( var particle in Particles )
+			centerOfMass += particle.WorldPosition;
+
+		centerOfMass /= Particles.Count;
+
+		for ( int i = 0; i < Particles.Count; i++ )
+			StartPositions[i] = Particles[i].WorldPosition - centerOfMass;
 
 	}
 
@@ -254,10 +272,12 @@ public sealed class SoftBody : Component
 		Vector3 max = bounds.Maxs * Renderer.WorldScale + Renderer.WorldPosition;
 
 		float maxDim = MathF.Max( MathF.Max( bounds.Size.x, bounds.Size.y ), bounds.Size.y );
-		float pRadius = ParticleRadius;
-		float step = MathF.Max( maxDim / 6f, pRadius * 3f );
+		float step = MathF.Max( maxDim / 6f, ParticleRadius * 2.5f );
 
-		float minDst = pRadius * 2f;
+		float minDst = ParticleRadius * 2f;
+
+		// calculate max connection distance as the diagonal distance between particles.
+		ConnectionDistance = step * Renderer.WorldScale.y * 1.415f;
 
 		Vector3 pos = new Vector3( min.x, min.y, min.z );
 		while ( pos.y < max.y )
@@ -333,11 +353,33 @@ public sealed class SoftBody : Component
 
 		foreach ( Connection con in Connections )
 		{
-			// TODO: make this one call.
 			ConstrainParticles( con.A, con.B, con.WantedDistance );
 			ConstrainParticles( con.B, con.A, con.WantedDistance );
 		}
 
+		// Calculate center of mass
+		CenterOfMass = 0;
+
+		foreach ( var particle in Particles )
+		{
+			CenterOfMass += particle.WorldPosition;
+		}
+
+		CenterOfMass /= Particles.Count;
+
+
+		//for ( int i = 0; i < Particles.Count; i++ )
+		//{
+		//	Vector3 targetPosition = centerOfMass + RestPositions[i];
+		//	Vector3 displacement = targetPosition - Particles[i].WorldPosition;
+
+		//	Vector3 shapeForce = displacement * ShapeRetentionStiffness; // Tune this stiffness
+
+
+		//	//Particles[i].ApplyForce( shapeForce );
+		//}
+
+		// Update bounds
 		BBox bounds = Renderer.Model.Bounds;
 		Vector3 min = bounds.Mins * Renderer.WorldScale + Renderer.WorldPosition;
 		Vector3 max = bounds.Maxs * Renderer.WorldScale + Renderer.WorldPosition;
@@ -368,23 +410,49 @@ public sealed class SoftBody : Component
 
 		// Apply force proportional to the mass ratio
 		float massRatio = (from.PhysicsBody.Mass / (from.PhysicsBody.Mass + to.PhysicsBody.Mass));
-		to.ApplyForce( (springForce + damperForce) * massRatio );
 
-		float maxDistance = WantedDistance * MaxStretch;
-		if ( dst > maxDistance )
+		Vector3 totalForce = springForce + damperForce;
+
+		from.ApplyForce( -totalForce * 1-massRatio );
+		to.ApplyForce( totalForce * massRatio );
+
+		// Shape Retention Logic with Better Shape Preservation
+		if ( ShapeRetentionStiffness > 0 )
 		{
-			// Move 'to' closer to 'from'
-			Vector3 clampedPosition = from.WorldPosition + dir * maxDistance;
-			to.Velocity += to.WorldPosition - clampedPosition;
-			//to.ApplyForce( to.WorldPosition - clampedPosition );
-			//to.WorldPosition = clampedPosition;
+			// Compute the initial relative vector between particles A and B
+			Vector3 initialRelative = StartPositions[(int)B] - StartPositions[(int)A];
+			float initialLength = initialRelative.Length;
+
+			// Calculate the current relative vector and its length
+			Vector3 currentRelative = to.WorldPosition - from.WorldPosition;
+			float currentLength = currentRelative.Length;
+
+			// Normalize the current relative vector
+			Vector3 currentNormal = currentRelative.Normal;
+
+			// Project the initial relative vector onto the current normal to calculate the target position
+			Vector3 targetRelative = currentNormal * initialLength;
+
+			// Compute the corrective displacement vector
+			Vector3 correctiveDisplacement = targetRelative - currentRelative;
+
+			// Apply corrective forces only if the displacement is significant
+			if ( correctiveDisplacement.Length > 0.01f )
+			{
+				// Calculate corrective force
+				Vector3 correctiveForce = correctiveDisplacement * ShapeRetentionStiffness;
+
+				// Apply forces to the two particles
+				from.ApplyForce( -correctiveForce );
+				to.ApplyForce( correctiveForce );
+			}
 		}
 
 #if DEBUG
-		if(DebugDrawFlags.Contains(DebugFlags.Springs))
+		if (DebugDrawFlags.Contains(DebugFlags.Springs))
 		{
 			Gizmo.Draw.Color = ColorX.GooberColors[A % ColorX.GooberColors.Length];
-			Gizmo.Draw.Line( to.WorldPosition, to.WorldPosition + (from.WorldPosition - to.WorldPosition).Normal );
+			Gizmo.Draw.Line( to.WorldPosition, to.WorldPosition + (from.WorldPosition - to.WorldPosition) );
 		}
 #endif
 
